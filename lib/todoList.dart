@@ -1,113 +1,75 @@
-import 'package:firstapp/database_helper.dart';
-import 'package:firstapp/drawer.dart';
 import 'package:flutter/material.dart';
-import 'todo.dart';
+import 'drawer.dart';
 
-class TodoListPage extends StatefulWidget {
-  const TodoListPage({super.key});
+class TodolistPage extends StatefulWidget {
+  const TodolistPage({super.key});
 
   @override
-  State<TodoListPage> createState() => _TodoListPageState();
+  State<TodolistPage> createState() => _TodolistPageState();
 }
 
-class _TodoListPageState extends State<TodoListPage> {
-  late Future<List<Todo>> _todoList;
-  @override
-  void initState() {
-    super.initState();
-    _todoList = _fetchTodos(); // ดึงข้อมูล Todo เมื่อเริ่มต้นหน้า
+class _TodolistPageState extends State<TodolistPage> {
+  final TextEditingController _controller = TextEditingController();
+  final List<Map<String, dynamic>> _todoItems = [];
+
+  void _addTodoItem() {
+    if (_controller.text.isNotEmpty) {
+      setState(() {
+        _todoItems.add({'title': _controller.text, 'completed': false});
+        _controller.clear();
+      });
+      Navigator.of(context).pop();
+    }
   }
 
-  Future<List<Todo>> _fetchTodos() async {
-    return await DatabaseHelper().getTodos();
-  }
-
-  void _toggleTodoCompletion(Todo todo) async {
-    todo.isCompleted = !todo.isCompleted; // สลับสถานะการทำเสร็จ
-    await DatabaseHelper().updateTodo(todo); // อัปเดตสถานะในฐานข้อมูล
+  void _toggleTodoStatus(int index, bool? value) {
     setState(() {
-      _todoList = _fetchTodos(); // รีเฟรชรายการ Todo หลังจากอัปเดต
+      _todoItems[index]['completed'] = value ?? false;
     });
   }
 
-  void _addTodo() {
-    TextEditingController _todoController = TextEditingController();
-
+  void _showAddTodoDialog() {
     showDialog(
       context: context,
-      builder: (context) {
-        String tast = '';
-        return AlertDialog(
-            title: const Text('Add Todo'),
-            content: TextField(
-              onChanged: (value) {
-                tast = value; // onchanged ใช้ได้แต่กินประสิทธิภาพเครื่่อง
-              },
-              controller: _todoController,
-              decoration: const InputDecoration(hintText: 'Enter Todo'),
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () {
-                    if (tast.isNotEmpty) {
-                      final todo = Todo(
-                        task: tast,
-                        isCompleted: false,
-                      );
-                      DatabaseHelper().insertTodo(todo);
-                    }
-                    Navigator.pop(context);
-                  },
-                  child: const Text('บันทึก'))
-            ]);
-      },
+      builder: (context) => AlertDialog(
+        title: const Text('เพิ่มรายการใหม่'),
+        content: TextField(
+          controller: _controller,
+          decoration: const InputDecoration(hintText: 'กรอกรายการ...'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('ยกเลิก'),
+          ),
+          TextButton(
+            onPressed: _addTodoItem,
+            child: const Text('เพิ่ม'),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Todo List'),
-      ),
+      appBar: AppBar(title: const Text('Todolist')),
       drawer: CustomDrawer(),
-      body: FutureBuilder<List<Todo>>(
-          future: _todoList,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(
-                  child:
-                      CircularProgressIndicator()); // แสดง loading ถ้ายังโหลดไม่เสร็จ
-            }
-
-            if (snapshot.hasError) {
-              return Center(
-                  child: Text(
-                      'Error: ${snapshot.error}')); // แสดงข้อความถ้ามีข้อผิดพลาด
-            }
-
-            final todos = snapshot.data ?? [];
-
-            return ListView.builder(
-              itemCount: todos.length,
-              itemBuilder: (context, index) {
-                final todo = todos[index];
-                return ListTile(
-                  title: Text(todo.task), // แสดงชื่อ Todo
-                  trailing: Checkbox(
-                    value: todo.isCompleted, // แสดงสถานะการทำเสร็จ
-                    onChanged: (value) {
-                      _toggleTodoCompletion(todo); // เมื่อคลิกเพื่ออัปเดตสถานะ
-                    },
-                  ),
-                );
-              },
-            );
-          }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _addTodo();
+      body: ListView.builder(
+        itemCount: _todoItems.length,
+        itemBuilder: (context, index) {
+          return ListTile(
+            title: Text(_todoItems[index]['title']),
+            trailing: Checkbox(
+              value: _todoItems[index]['completed'],
+              onChanged: (value) => _toggleTodoStatus(index, value),
+            ),
+          );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddTodoDialog,
         child: const Icon(Icons.add),
       ),
     );

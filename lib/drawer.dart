@@ -41,7 +41,7 @@ class CustomDrawer extends StatelessWidget {
               title: const Text('Todo List'),
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const TodoListPage()),
+                  MaterialPageRoute(builder: (context) => const TodolistPage()),
                 );
               }),
         ],
